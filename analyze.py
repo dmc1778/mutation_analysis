@@ -166,6 +166,6 @@ def main():
 
 
 if __name__ == '__main__':
-    db_obj.delete_table()
+    # db_obj.delete_table()
     db_obj.create_table()
     main()

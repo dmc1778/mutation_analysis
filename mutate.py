@@ -3,80 +3,256 @@ from analyze import CheckPotential
 import os
 import codecs
 from subprocess import call
+import re
 
 db_obj = DBHandler()
 check_obj = CheckPotential()
 
-project_name = "grep"
+
 base_path = "/home/nimashiri/grep-3.6/src"
 PotentialPath = "/home/nimashiri/grep-3.6/src"
 
 
 class Mutate:
-    def __init__(self) -> None:
-        self.operators = {'REC2M': False, 'REDAWN': False, 'REDAWN': False,
-                          'REDAWZ': False, 'RMFS': False, 'REC2A': False, 'REM2A': False}
+    def __init__(self, project_name):
+        self.killed = 0
+        self.alive = 0
+        self.project_name = project_name
 
-    def write_to_disc(self, line, filename):
-        temp_directory = './mutation_backend'
-        temp_directory = os.path.join(temp_directory, filename)
-        with codecs.open(temp_directory, 'w') as f_method:
-            f_method.write("%s\n" % line)
-        f_method.close()
+    def reset_flag(self):
+        self.operators = {'REC2M': False, 'REDAWN': False,
+                          'REDAWZ': False, 'RMFS': False, 'REC2A': False, 'REM2A': False, 'RESOTPE': False}
+
+    def report_summary(self):
+        print("COMPILATION of {project_name} project is finished.".format(
+            project_name=self.project_name))
+        print("TOTAL NUMBER OF GENERATED MUTANTS: {totalM}".format(
+            totalM=self.alive + self.killed))
+        print("ALIVE MUTANTS: {alive}".format(alive=self.alive))
+        print("KILLED MUTANS: {killed}".format(killed=self.killed))
+        # print("MUTATION SCORE: {score}".format(
+        #     score=(self.killed) / (self.alive + self.killed)))
+
+    def write_to_disc(self, filecontent, filename):
+        target_path = os.path.join(base_path, filename)
+        with codecs.open(target_path, 'w') as f_method:
+            for line in filecontent:
+                f_method.write("%s\n" % filecontent[line])
+            f_method.close()
 
     def determine_operator(self, opt):
-        if opt == 'xmalloc' or opt == 'malloc' == opt == 'kmalloc':
+        if 'xmalloc' in opt or 'malloc' in opt or 'kmalloc' in opt:
             self.operators['REDAWN'] = True
             self.operators['REDAWZ'] = True
             self.operators['REC2A'] = True
-        if opt == 'free' or opt == 'kfree':
+        if 'free' in opt or 'kfree' in opt:
             self.operators['RMFS'] = True
-        if opt == 'xcalloc' or opt == 'calloc' or opt == 'kcalloc':
+        if 'xcalloc' in opt or 'calloc' in opt or 'kcalloc' in opt:
             self.operators['REC2M'] = True
             self.operators['REM2A'] = True
+        if 'sizeof' in opt:
+            self.operators['RESOTPE'] = True
 
         filtered_operators = [k for k, v in self.operators.items() if v]
         return filtered_operators
 
-    def apply_mutate(self, filtered_operators, data_dict, item):
-        self.write_to_disc(item[1], item[2])
+    def REDAWN_schemata(self, components):
+        for i, item in enumerate(components):
+            if item == 'xmalloc' or item == 'malloc':
+                components.pop(i)
+                components.pop(i)
+        components.append(' NULL;')
+        return components
+
+    def REDAWZ_schemata(self, components):
+        for i, item in enumerate(components):
+            if item == 'xmalloc' or item == 'malloc':
+                components[i+1] = '()'
+        return components
+
+    def REC2A_schemata(self, components):
+        for i, item in enumerate(components):
+            if item == 'xmalloc' or item == 'malloc':
+                components[i] = 'alloca'
+        return components
+
+    def REC2M_schemata(self, components):
+        for i, item in enumerate(components):
+            if item == 'calloc':
+                components[i] = 'malloc'
+            if item == 'xcalloc':
+                components[i] = 'xmalloc'
+            if '(' in item:
+                components[i] = components[i].replace(',', '*')
+        return components
+
+    def REM2A_schemata(self, components):
+        for i, item in enumerate(components):
+            if item == 'calloc':
+                components[i] = 'alloca'
+            if item == 'xcalloc':
+                components[i] = 'alloca'
+            if '(' in item:
+                components[i] = components[i].replace(',', '*')
+        return components
+
+    def apply_mutate(self, filtered_operators, original_data_dict, item):
+
         for mkind in filtered_operators:
+            temp_data_dict = original_data_dict
             if mkind == 'REDAWN':
-                rc = call("./mutation_backend/run.sh %s %s" %
-                          (str('REDAWN'), str(item[2])),  shell=True)
-                # save item to file
-                # apply txl on file
-                # load file
-                # replace file with original file
-                # compile program
-                # reconstruct program
-                None
+                call("./compilation_scripts/unzip.sh")
+                components = re.findall(
+                    r'([^=]+)((?<!=)=(?!=))(?:^|\W)(xmalloc)(?:$|\W)(.*)', item[1])
+                components2 = re.findall(
+                    r'([^=]+)((?<!=)=(?!=))(?:^|\W)(malloc)(?:$|\W)(.*)', item[1])
+                if components:
+                    selected = components
+                else:
+                    selected = components2
+                selected = list(selected[0])
+                selected = self.REDAWN_schemata(selected)
+                temp_mutant = ''.join(selected)
+                temp_data_dict[item[0]] = temp_mutant
+                self.write_to_disc(temp_data_dict, item[2])
+
+                rc = call("./compilation_scripts/grep-exec.sh")
+                if rc == 0:
+                    self.alive += 1
+                else:
+                    self.killed += 1
+                #self.write_to_disc(original_data_dict, item[2])
+
             if mkind == 'REDAWZ':
-                rc = call("./mutation_backend/run.sh %s %s" %
-                          (str('REDAWZ'), str(item[2])),  shell=True)
+                call("./compilation_scripts/unzip.sh")
+                components = re.findall(
+                    r'([^=]+)((?<!=)=(?!=))(?:^|\W)(xmalloc)(?:$|\W)(.*)', item[1])
+                components2 = re.findall(
+                    r'([^=]+)((?<!=)=(?!=))(?:^|\W)(malloc)(?:$|\W)(.*)', item[1])
+                if components:
+                    selected = components
+                else:
+                    selected = components2
+                selected = list(selected[0])
+                selected = self.REDAWZ_schemata(selected)
+                temp_mutant = ''.join(selected)
+                temp_data_dict[item[0]] = temp_mutant
+                self.write_to_disc(temp_data_dict, item[2])
+
+                rc = call("./compilation_scripts/grep-exec.sh")
+                if rc == 0:
+                    self.alive += 1
+                else:
+                    self.killed += 1
+                # self.write_to_disc(original_data_dict, item[2])
+
             if mkind == 'REC2A':
-                rc = call("./mutation_backend/run.sh %s %s" %
-                          (str('REC2A'), str(item[2])),  shell=True)
+                call("./compilation_scripts/unzip.sh")
+                components = re.findall(
+                    r'([^=]+)((?<!=)=(?!=))(?:^|\W)(xmalloc)(?:$|\W)(.*)', item[1])
+                components2 = re.findall(
+                    r'([^=]+)((?<!=)=(?!=))(?:^|\W)(malloc)(?:$|\W)(.*)', item[1])
+                if components:
+                    selected = components
+                else:
+                    selected = components2
+                selected = list(selected[0])
+                selected = self.REC2A_schemata(selected)
+                temp_mutant = ''.join(selected)
+                temp_data_dict[item[0]] = temp_mutant
+                self.write_to_disc(temp_data_dict, item[2])
+
+                rc = call("./compilation_scripts/grep-exec.sh")
+                if rc == 0:
+                    self.alive += 1
+                else:
+                    self.killed += 1
+                # self.write_to_disc(original_data_dict, item[2])
+
             if mkind == 'RMFS':
-                rc = call("./mutation_backend/run.sh %s %s" %
-                          (str('RMFS'), str(item[2])),  shell=True)
+                call("./compilation_scripts/unzip.sh")
+                components = re.findall(r'(?:^|\W)(free)(?:$|\W)(.*)', item[1])
+                if components:
+                    del temp_data_dict[item[0]]
+                    self.write_to_disc(temp_data_dict, item[2])
+
+                    rc = call("./compilation_scripts/grep-exec.sh")
+                    if rc == 0:
+                        self.alive += 1
+                    else:
+                        self.killed += 1
+                    #self.write_to_disc(original_data_dict, item[2])
+                else:
+                    rc = call(
+                        "./compilation_scripts/grep-exec.sh")
+                    if rc == 0:
+                        self.alive += 1
+                    else:
+                        self.killed += 1
+
             if mkind == 'REC2M':
-                rc = call("./mutation_backend/run.sh %s %s" %
-                          (str('REC2M'), str(item[2])),  shell=True)
+                call("./compilation_scripts/unzip.sh")
+                components = re.findall(
+                    r'([^=]+)((?<!=)=(?!=))(?:^|\W)(calloc)(?:$|\W)(.*)', item[1])
+                components2 = re.findall(
+                    r'([^=]+)((?<!=)=(?!=))(?:^|\W)(xcalloc)(?:$|\W)(.*)', item[1])
+                if components:
+                    selected = components
+                else:
+                    selected = components2
+                selected = list(selected[0])
+                selected = self.REC2M_schemata(selected)
+                temp_mutant = ''.join(selected)
+                temp_data_dict[item[0]] = temp_mutant
+                self.write_to_disc(temp_data_dict, item[2])
+
+                rc = call("./compilation_scripts/grep-exec.sh")
+                if rc == 0:
+                    self.alive += 1
+                else:
+                    self.killed += 1
+                # self.write_to_disc(original_data_dict, item[2])
+
             if mkind == 'REM2A':
-                rc = call("./mutation_backend/run.sh %s %s" %
-                          (str('REM2A'), str(item[2])),  shell=True)
+                call("./compilation_scripts/unzip.sh")
+                components = re.findall(
+                    r'([^=]+)((?<!=)=(?!=))(?:^|\W)(calloc)(?:$|\W)(.*)', item[1])
+                components2 = re.findall(
+                    r'([^=]+)((?<!=)=(?!=))(?:^|\W)(xcalloc)(?:$|\W)(.*)', item[1])
+                if components:
+                    selected = components
+                else:
+                    selected = components2
+                selected = list(selected[0])
+                selected = self.REM2A_schemata(selected)
+                temp_mutant = ''.join(selected)
+                temp_data_dict[item[0]] = temp_mutant
+                self.write_to_disc(temp_data_dict, item[2])
+
+                rc = call("./compilation_scripts/grep-exec.sh")
+                if rc == 0:
+                    self.alive += 1
+                else:
+                    self.killed += 1
+                # self.write_to_disc(original_data_dict, item[2])
 
 
 def main():
-    m = Mutate()
+    project_name = "grep"
+    m = Mutate(project_name)
     ds_list = db_obj.filter_table()
     for item in ds_list:
+        call("./compilation_scripts/unzip.sh")
+        item = list(item)
         if ';' in item[1]:
             current_file = os.path.join(base_path, item[2])
             data_dict = check_obj.read_code_file(current_file)
-            filtered_operators = m.determine_operator(item[3])
-            m.apply_mutate(filtered_operators, data_dict, item)
+            if 'free' not in item[3]:
+                if 'xnmalloc' not in item[1]:
+                    filtered_operators = m.determine_operator(item[3])
+                    m.apply_mutate(filtered_operators, data_dict, item)
+                m.reset_flag()
+        m.report_summary()
 
 
 if __name__ == "__main__":

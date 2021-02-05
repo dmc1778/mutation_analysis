@@ -10,14 +10,13 @@ db_obj = DBHandler()
 check_obj = CheckPotential()
 
 
-base_path = "/home/nimashiri/grep-3.6/src"
-PotentialPath = "/home/nimashiri/grep-3.6/src"
+base_path = "/home/nimashiri/diffutils-3.6/src"
+PotentialPath = "/home/nimashiri/diffutils-3.6/src"
 
 
 def runProcess(exe):
     p = subprocess.Popen(exe, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     while(True):
-        # returns None while subprocess is running
         retcode = p.poll()
         line = p.stdout.readline()
         yield line
@@ -33,19 +32,34 @@ class Mutate:
         self.operators = {'REC2M': False, 'REDAWN': False,
                           'REDAWZ': False, 'RMFS': False, 'REC2A': False, 'REM2A': False, 'RESOTPE': False}
 
+        self.REC2M_COUNTER = 0
+        self.REDAWN_COUNTER = 0
+        self.REDAWZ_COUNTER = 0
+        self.RMFS_COUNTER = 0
+        self.REC2A_COUNTER = 0
+        self.REM2A_COUNTER = 0
+
     def reset_flag(self):
         self.operators = {'REC2M': False, 'REDAWN': False,
                           'REDAWZ': False, 'RMFS': False, 'REC2A': False, 'REM2A': False, 'RESOTPE': False}
 
     def report_summary(self):
+        print("#######################MUTATION ANALYSIS############")
         print("COMPILATION of {project_name} project is finished.".format(
             project_name=self.project_name))
         print("TOTAL NUMBER OF GENERATED MUTANTS: {totalM}".format(
             totalM=self.alive + self.killed))
         print("ALIVE MUTANTS: {alive}".format(alive=self.alive))
         print("KILLED MUTANS: {killed}".format(killed=self.killed))
-        # print("MUTATION SCORE: {score}".format(
-        #     score=(self.killed) / (self.alive + self.killed)))
+        print("#######################STATISTICS####################")
+        print("THE NUMBER OF GENERATED MUTANTS FOR EACH OPERATOR:")
+        print("REC2M: {rec2m}".format(rec2m=self.REC2M_COUNTER))
+        print("REDAWZ: {redawz}".format(redawz=self.REDAWZ_COUNTER))
+        print("REDAWN: {redawn}".format(redawn=self.REDAWN_COUNTER))
+        print("RMFS: {rmfs}".format(rmfs=self.RMFS_COUNTER))
+        print("REC2A: {rec2a}".format(rec2a=self.REC2A_COUNTER))
+        print("REM2A: {rem2a}".format(rem2a=self.REM2A_COUNTER))
+        print("###################################################")
 
     def write_to_disc(self, filecontent, filename):
         target_path = os.path.join(base_path, filename)
@@ -114,6 +128,7 @@ class Mutate:
         for mkind in filtered_operators:
             temp_data_dict = original_data_dict
             if mkind == 'REDAWN':
+                self.REDAWN_COUNTER += 1
                 call("./compilation_scripts/unzip.sh")
                 components = re.findall(
                     r'([^=]+)((?<!=)=(?!=))(?:^|\W)(xmalloc)(?:$|\W)(.*)', item[1])
@@ -143,6 +158,7 @@ class Mutate:
                 #self.write_to_disc(original_data_dict, item[2])
 
             if mkind == 'REDAWZ':
+                self.REDAWZ_COUNTER += 1
                 call("./compilation_scripts/unzip.sh")
                 components = re.findall(
                     r'([^=]+)((?<!=)=(?!=))(?:^|\W)(xmalloc)(?:$|\W)(.*)', item[1])
@@ -170,6 +186,7 @@ class Mutate:
                 # self.write_to_disc(original_data_dict, item[2])
 
             if mkind == 'REC2A':
+                self.REC2A_COUNTER += 1
                 call("./compilation_scripts/unzip.sh")
                 components = re.findall(
                     r'([^=]+)((?<!=)=(?!=))(?:^|\W)(xmalloc)(?:$|\W)(.*)', item[1])
@@ -197,6 +214,7 @@ class Mutate:
                 # self.write_to_disc(original_data_dict, item[2])
 
             if mkind == 'RMFS':
+                self.RMFS_COUNTER += 1
                 call("./compilation_scripts/unzip.sh")
                 components = re.findall(r'(?:^|\W)(free)(?:$|\W)(.*)', item[1])
                 if components:
@@ -217,6 +235,7 @@ class Mutate:
                         self.killed += 1
 
             if mkind == 'REC2M':
+                self.REC2M_COUNTER += 1
                 call("./compilation_scripts/unzip.sh")
                 components = re.findall(
                     r'([^=]+)((?<!=)=(?!=))(?:^|\W)(calloc)(?:$|\W)(.*)', item[1])
@@ -244,6 +263,7 @@ class Mutate:
                 # self.write_to_disc(original_data_dict, item[2])
 
             if mkind == 'REM2A':
+                self.REM2A_COUNTER += 1
                 call("./compilation_scripts/unzip.sh")
                 components = re.findall(
                     r'([^=]+)((?<!=)=(?!=))(?:^|\W)(calloc)(?:$|\W)(.*)', item[1])
@@ -273,7 +293,7 @@ class Mutate:
 
 
 def main():
-    project_name = "grep"
+    project_name = "diffutils"
     m = Mutate(project_name)
     ds_list = db_obj.filter_table()
     for item in ds_list:

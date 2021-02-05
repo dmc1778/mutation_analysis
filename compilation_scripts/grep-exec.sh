@@ -2,9 +2,9 @@
 
 cd /home/nimashiri/
 
-chmod -R 755 grep-3.6
+chmod -R 755 diffutils-3.6
 
-cd /home/nimashiri/grep-3.6/
+cd /home/nimashiri/diffutils-3.6/
 ./configure
 make check
-rm -rf /home/nimashiri/grep-3.6/
+rm -rf /home/nimashiri/diffutils-3.6/

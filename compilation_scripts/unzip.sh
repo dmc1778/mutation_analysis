@@ -1,4 +1,4 @@
 #! /bin/bash
 
 cd /home/nimashiri/
-tar -xf grep-3.6.tar.gz
+tar -xf diffutils-3.6.tar.xz

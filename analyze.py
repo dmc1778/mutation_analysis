@@ -15,9 +15,9 @@ from DBadapter import DBHandler
 
 project_name = "grep"
 
-base_path = "/home/nimashiri/grep-3.6/src"
+base_path = "/home/nimashiri/diffutils-3.6/src"
 
-PotentialPath = "/home/nimashiri/grep-3.6/src"
+PotentialPath = "/home/nimashiri/diffutils-3.6/src"
 
 db_obj = DBHandler()
 

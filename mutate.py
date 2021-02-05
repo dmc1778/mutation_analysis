@@ -3,6 +3,7 @@ from analyze import CheckPotential
 import os
 import codecs
 from subprocess import call
+import subprocess
 import re
 
 db_obj = DBHandler()
@@ -13,11 +14,24 @@ base_path = "/home/nimashiri/grep-3.6/src"
 PotentialPath = "/home/nimashiri/grep-3.6/src"
 
 
+def runProcess(exe):
+    p = subprocess.Popen(exe, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    while(True):
+        # returns None while subprocess is running
+        retcode = p.poll()
+        line = p.stdout.readline()
+        yield line
+        if retcode is not None:
+            break
+
+
 class Mutate:
     def __init__(self, project_name):
         self.killed = 0
         self.alive = 0
         self.project_name = project_name
+        self.operators = {'REC2M': False, 'REDAWN': False,
+                          'REDAWZ': False, 'RMFS': False, 'REC2A': False, 'REM2A': False, 'RESOTPE': False}
 
     def reset_flag(self):
         self.operators = {'REC2M': False, 'REDAWN': False,
@@ -97,7 +111,6 @@ class Mutate:
         return components
 
     def apply_mutate(self, filtered_operators, original_data_dict, item):
-
         for mkind in filtered_operators:
             temp_data_dict = original_data_dict
             if mkind == 'REDAWN':
@@ -114,13 +127,19 @@ class Mutate:
                 selected = self.REDAWN_schemata(selected)
                 temp_mutant = ''.join(selected)
                 temp_data_dict[item[0]] = temp_mutant
-                self.write_to_disc(temp_data_dict, item[2])
+                #self.write_to_disc(temp_data_dict, item[2])
 
-                rc = call("./compilation_scripts/grep-exec.sh")
-                if rc == 0:
+                #rc = call("./compilation_scripts/grep-exec.sh")
+                kill_flag = False
+                for line in runProcess('./compilation_scripts/grep-exec.sh'.split()):
+                    # print(line)
+                    if re.findall(r'\b(FAIL)\b', str(line)):
+                        self.killed += 1
+                        kill_flag = True
+                        break
+                if not kill_flag:
                     self.alive += 1
-                else:
-                    self.killed += 1
+
                 #self.write_to_disc(original_data_dict, item[2])
 
             if mkind == 'REDAWZ':
@@ -139,11 +158,15 @@ class Mutate:
                 temp_data_dict[item[0]] = temp_mutant
                 self.write_to_disc(temp_data_dict, item[2])
 
-                rc = call("./compilation_scripts/grep-exec.sh")
-                if rc == 0:
+                kill_flag = False
+                for line in runProcess('./compilation_scripts/grep-exec.sh'.split()):
+                    # print(line)
+                    if re.findall(r'\b(FAIL)\b', str(line)):
+                        self.killed += 1
+                        kill_flag = True
+                        break
+                if not kill_flag:
                     self.alive += 1
-                else:
-                    self.killed += 1
                 # self.write_to_disc(original_data_dict, item[2])
 
             if mkind == 'REC2A':
@@ -162,11 +185,15 @@ class Mutate:
                 temp_data_dict[item[0]] = temp_mutant
                 self.write_to_disc(temp_data_dict, item[2])
 
-                rc = call("./compilation_scripts/grep-exec.sh")
-                if rc == 0:
+                kill_flag = False
+                for line in runProcess('./compilation_scripts/grep-exec.sh'.split()):
+                    # print(line)
+                    if re.findall(r'\b(FAIL)\b', str(line)):
+                        self.killed += 1
+                        kill_flag = True
+                        break
+                if not kill_flag:
                     self.alive += 1
-                else:
-                    self.killed += 1
                 # self.write_to_disc(original_data_dict, item[2])
 
             if mkind == 'RMFS':
@@ -175,7 +202,6 @@ class Mutate:
                 if components:
                     del temp_data_dict[item[0]]
                     self.write_to_disc(temp_data_dict, item[2])
-
                     rc = call("./compilation_scripts/grep-exec.sh")
                     if rc == 0:
                         self.alive += 1
@@ -206,11 +232,15 @@ class Mutate:
                 temp_data_dict[item[0]] = temp_mutant
                 self.write_to_disc(temp_data_dict, item[2])
 
-                rc = call("./compilation_scripts/grep-exec.sh")
-                if rc == 0:
+                kill_flag = False
+                for line in runProcess('./compilation_scripts/grep-exec.sh'.split()):
+                    # print(line)
+                    if re.findall(r'\b(FAIL)\b', str(line)):
+                        self.killed += 1
+                        kill_flag = True
+                        break
+                if not kill_flag:
                     self.alive += 1
-                else:
-                    self.killed += 1
                 # self.write_to_disc(original_data_dict, item[2])
 
             if mkind == 'REM2A':
@@ -229,11 +259,16 @@ class Mutate:
                 temp_data_dict[item[0]] = temp_mutant
                 self.write_to_disc(temp_data_dict, item[2])
 
-                rc = call("./compilation_scripts/grep-exec.sh")
-                if rc == 0:
+                kill_flag = False
+                for line in runProcess('./compilation_scripts/grep-exec.sh'.split()):
+                    # rint(line)
+                    if re.findall(r'\b(FAIL)\b', str(line)):
+                        self.killed += 1
+                        kill_flag = True
+                        break
+                if not kill_flag:
                     self.alive += 1
-                else:
-                    self.killed += 1
+
                 # self.write_to_disc(original_data_dict, item[2])
 
 
@@ -252,7 +287,7 @@ def main():
                     filtered_operators = m.determine_operator(item[3])
                     m.apply_mutate(filtered_operators, data_dict, item)
                 m.reset_flag()
-        m.report_summary()
+                m.report_summary()
 
 
 if __name__ == "__main__":

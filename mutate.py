@@ -5,13 +5,14 @@ import codecs
 from subprocess import call
 import subprocess
 import re
+import time
 
 db_obj = DBHandler()
 check_obj = CheckPotential()
 
 
-base_path = "/home/nimashiri/diffutils-3.6/src"
-PotentialPath = "/home/nimashiri/diffutils-3.6/src"
+base_path = "/home/nimashiri/coreutils-8.32/src"
+PotentialPath = "/home/nimashiri/coreutils-8.32/src"
 
 
 def runProcess(exe):
@@ -32,12 +33,18 @@ class Mutate:
         self.operators = {'REC2M': False, 'REDAWN': False,
                           'REDAWZ': False, 'RMFS': False, 'REC2A': False, 'REM2A': False, 'RESOTPE': False}
 
-        self.REC2M_COUNTER = 0
-        self.REDAWN_COUNTER = 0
-        self.REDAWZ_COUNTER = 0
-        self.RMFS_COUNTER = 0
-        self.REC2A_COUNTER = 0
-        self.REM2A_COUNTER = 0
+        self.REC2M_COUNTER_alive = 0
+        self.REC2M_COUNTER_killed = 0
+        self.REDAWN_COUNTER_alive = 0
+        self.REDAWN_COUNTER_killed = 0
+        self.REDAWZ_COUNTER_alive = 0
+        self.REDAWZ_COUNTER_killed = 0
+        self.RMFS_COUNTER_alive = 0
+        self.RMFS_COUNTER_killed = 0
+        self.REC2A_COUNTER_alive = 0
+        self.REC2A_COUNTER_killed = 0
+        self.REM2A_COUNTER_alive = 0
+        self.REM2A_COUNTER_killed = 0
 
     def reset_flag(self):
         self.operators = {'REC2M': False, 'REDAWN': False,
@@ -53,13 +60,30 @@ class Mutate:
         print("KILLED MUTANS: {killed}".format(killed=self.killed))
         print("#######################STATISTICS####################")
         print("THE NUMBER OF GENERATED MUTANTS FOR EACH OPERATOR:")
-        print("REC2M: {rec2m}".format(rec2m=self.REC2M_COUNTER))
-        print("REDAWZ: {redawz}".format(redawz=self.REDAWZ_COUNTER))
-        print("REDAWN: {redawn}".format(redawn=self.REDAWN_COUNTER))
-        print("RMFS: {rmfs}".format(rmfs=self.RMFS_COUNTER))
-        print("REC2A: {rec2a}".format(rec2a=self.REC2A_COUNTER))
-        print("REM2A: {rem2a}".format(rem2a=self.REM2A_COUNTER))
-        print("###################################################")
+        print('--------------------------------------------------')
+        print("REC2M ALIVE: {rec2ma}".format(rec2ma=self.REC2M_COUNTER_alive))
+        print("REC2M KILLED: {rec2mk}".format(
+            rec2mk=self.REC2M_COUNTER_killed))
+        print('--------------------------------------------------')
+        print("REDAWZ ALIVE: {redawza}".format(
+            redawza=self.REDAWZ_COUNTER_alive))
+        print("REDAWZ KILLED: {redawzk}".format(
+            redawzk=self.REDAWZ_COUNTER_killed))
+        print('--------------------------------------------------')
+        print("REDAWN ALIVE: {redawna}".format(
+            redawna=self.REDAWN_COUNTER_alive))
+        print("REDAWN KILLED: {redawnk}".format(
+            redawnk=self.REDAWN_COUNTER_killed))
+        print('--------------------------------------------------')
+        print("RMFS ALIVE: {rmfsa}".format(rmfsa=self.RMFS_COUNTER_alive))
+        print("RMFS KILLED: {rmfsk}".format(rmfsk=self.RMFS_COUNTER_killed))
+        print('--------------------------------------------------')
+        print("REC2A ALIVE: {rec2aa}".format(rec2aa=self.REC2A_COUNTER_alive))
+        print("REC2A KILLED: {rec2ak}".format(
+            rec2ak=self.REC2A_COUNTER_killed))
+        print('--------------------------------------------------')
+        print("REM2A: {rem2aa}".format(rem2aa=self.REM2A_COUNTER_alive))
+        print("REM2A: {rem2ak}".format(rem2ak=self.REM2A_COUNTER_killed))
 
     def write_to_disc(self, filecontent, filename):
         target_path = os.path.join(base_path, filename)
@@ -128,7 +152,6 @@ class Mutate:
         for mkind in filtered_operators:
             temp_data_dict = original_data_dict
             if mkind == 'REDAWN':
-                self.REDAWN_COUNTER += 1
                 call("./compilation_scripts/unzip.sh")
                 components = re.findall(
                     r'([^=]+)((?<!=)=(?!=))(?:^|\W)(xmalloc)(?:$|\W)(.*)', item[1])
@@ -138,6 +161,8 @@ class Mutate:
                     selected = components
                 else:
                     selected = components2
+                if not selected:
+                    break
                 selected = list(selected[0])
                 selected = self.REDAWN_schemata(selected)
                 temp_mutant = ''.join(selected)
@@ -151,14 +176,15 @@ class Mutate:
                     if re.findall(r'\b(FAIL)\b', str(line)):
                         self.killed += 1
                         kill_flag = True
+                        self.REDAWN_COUNTER_killed += 1
                         break
                 if not kill_flag:
                     self.alive += 1
+                    self.REDAWN_COUNTER_alive += 1
 
                 #self.write_to_disc(original_data_dict, item[2])
 
             if mkind == 'REDAWZ':
-                self.REDAWZ_COUNTER += 1
                 call("./compilation_scripts/unzip.sh")
                 components = re.findall(
                     r'([^=]+)((?<!=)=(?!=))(?:^|\W)(xmalloc)(?:$|\W)(.*)', item[1])
@@ -168,6 +194,8 @@ class Mutate:
                     selected = components
                 else:
                     selected = components2
+                if not selected:
+                    break
                 selected = list(selected[0])
                 selected = self.REDAWZ_schemata(selected)
                 temp_mutant = ''.join(selected)
@@ -180,13 +208,14 @@ class Mutate:
                     if re.findall(r'\b(FAIL)\b', str(line)):
                         self.killed += 1
                         kill_flag = True
+                        self.REDAWZ_COUNTER_killed += 1
                         break
                 if not kill_flag:
                     self.alive += 1
+                    self.REDAWZ_COUNTER_alive += 1
                 # self.write_to_disc(original_data_dict, item[2])
 
             if mkind == 'REC2A':
-                self.REC2A_COUNTER += 1
                 call("./compilation_scripts/unzip.sh")
                 components = re.findall(
                     r'([^=]+)((?<!=)=(?!=))(?:^|\W)(xmalloc)(?:$|\W)(.*)', item[1])
@@ -196,6 +225,8 @@ class Mutate:
                     selected = components
                 else:
                     selected = components2
+                if not selected:
+                    break
                 selected = list(selected[0])
                 selected = self.REC2A_schemata(selected)
                 temp_mutant = ''.join(selected)
@@ -208,13 +239,14 @@ class Mutate:
                     if re.findall(r'\b(FAIL)\b', str(line)):
                         self.killed += 1
                         kill_flag = True
+                        self.REC2A_COUNTER_killed += 1
                         break
                 if not kill_flag:
                     self.alive += 1
+                    self.REC2A_COUNTER_alive += 1
                 # self.write_to_disc(original_data_dict, item[2])
 
             if mkind == 'RMFS':
-                self.RMFS_COUNTER += 1
                 call("./compilation_scripts/unzip.sh")
                 components = re.findall(r'(?:^|\W)(free)(?:$|\W)(.*)', item[1])
                 if components:
@@ -235,7 +267,6 @@ class Mutate:
                         self.killed += 1
 
             if mkind == 'REC2M':
-                self.REC2M_COUNTER += 1
                 call("./compilation_scripts/unzip.sh")
                 components = re.findall(
                     r'([^=]+)((?<!=)=(?!=))(?:^|\W)(calloc)(?:$|\W)(.*)', item[1])
@@ -245,6 +276,8 @@ class Mutate:
                     selected = components
                 else:
                     selected = components2
+                if not selected:
+                    break
                 selected = list(selected[0])
                 selected = self.REC2M_schemata(selected)
                 temp_mutant = ''.join(selected)
@@ -257,13 +290,14 @@ class Mutate:
                     if re.findall(r'\b(FAIL)\b', str(line)):
                         self.killed += 1
                         kill_flag = True
+                        self.REC2M_COUNTER_killed += 1
                         break
                 if not kill_flag:
                     self.alive += 1
+                    self.REC2M_COUNTER_alive += 1
                 # self.write_to_disc(original_data_dict, item[2])
 
             if mkind == 'REM2A':
-                self.REM2A_COUNTER += 1
                 call("./compilation_scripts/unzip.sh")
                 components = re.findall(
                     r'([^=]+)((?<!=)=(?!=))(?:^|\W)(calloc)(?:$|\W)(.*)', item[1])
@@ -273,6 +307,8 @@ class Mutate:
                     selected = components
                 else:
                     selected = components2
+                if not selected:
+                    break
                 selected = list(selected[0])
                 selected = self.REM2A_schemata(selected)
                 temp_mutant = ''.join(selected)
@@ -281,19 +317,20 @@ class Mutate:
 
                 kill_flag = False
                 for line in runProcess('./compilation_scripts/grep-exec.sh'.split()):
-                    # rint(line)
+                    # print(line)
                     if re.findall(r'\b(FAIL)\b', str(line)):
                         self.killed += 1
                         kill_flag = True
+                        self.REM2A_COUNTER_killed += 1
                         break
                 if not kill_flag:
                     self.alive += 1
+                    self.REM2A_COUNTER_alive += 1
 
                 # self.write_to_disc(original_data_dict, item[2])
 
 
-def main():
-    project_name = "diffutils"
+def main(project_name):
     m = Mutate(project_name)
     ds_list = db_obj.filter_table()
     for item in ds_list:
@@ -311,4 +348,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    project_name = "coreutils-8.32"
+    print(
+        "MUTATION ANALYSIS STARTED FOR --- {project}".format(project=project_name))
+    start_time = time.time
+    main(project_name)
+    print("TIME ELAPSED %s SECONDS ---" % (time.time() - start_time))

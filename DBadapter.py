@@ -13,6 +13,7 @@ class DBHandler:
     def insert_data(self, lineNumber, potentialLine, methodBody, mutationKind):
         insert_query = "INSERT INTO mutationTable VALUES (" + "'" + str(
             lineNumber) + "'" + "," + "'" + potentialLine + "'" + "," + "'" + methodBody + "'" + "," + "'" + mutationKind + "'" + ")"
+        # print(insert_query)
         self.c.execute(insert_query)
         self.conn.commit()
 

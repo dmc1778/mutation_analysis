@@ -2,9 +2,9 @@
 
 cd /home/nimashiri/
 
-chmod -R 755 diffutils-3.6
+chmod -R 755 coreutils-8.32
 
-cd /home/nimashiri/diffutils-3.6/
+cd /home/nimashiri/coreutils-8.32/
 ./configure
 make check
-rm -rf /home/nimashiri/diffutils-3.6/
+rm -rf /home/nimashiri/coreutils-8.32/src/

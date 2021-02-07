@@ -1,4 +1,4 @@
 #! /bin/bash
 
 cd /home/nimashiri/
-tar -xf diffutils-3.6.tar.xz
+tar -xf coreutils-8.32.tar.xz

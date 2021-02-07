@@ -12,12 +12,14 @@ import csv
 from sklearn import metrics
 from pycparser import c_parser, c_ast
 from DBadapter import DBHandler
+from subprocess import call
+import subprocess
 
-project_name = "grep"
+project_name = "postgres-REL_13_1"
 
-base_path = "/home/nimashiri/diffutils-3.6/src"
+base_path = "/home/nimashiri/postgres-REL_13_1/src"
 
-PotentialPath = "/home/nimashiri/diffutils-3.6/src"
+PotentialPath = "/home/nimashiri/postgres-REL_13_1/src"
 
 db_obj = DBHandler()
 
@@ -31,11 +33,19 @@ class CheckPotential:
         self.calloc_counter = 0
         self.kcalloc_counter = 0
         self.xcalloc_counter = 0
-        self.RESOTPE_COUNTER = 0
+
         self.free_counter = 0
         self.kfree_counter = 0
         self.null_counter = 0
         self.sizeOf_counter = 0
+        self.palloc0_counter = 0
+
+        self.REDAWN = 0
+        self.REDAWZ = 0
+        self.REM2A = 0
+        self.RESOTPE = 0
+        self.REMTOSP = 0
+        self.RMFS = 0
 
     def reset_flag(self):
         self.line_reg = []
@@ -67,45 +77,44 @@ class CheckPotential:
 
     def func_UMA(self, current_file, filename):
         for line in self._method:
-            if "kcalloc (" in self._method[line] and "define" not in self._method[line] and ":" not in self._method[line] and "?" not in self._method[line]:
-                self.kcalloc_counter += 1
-                db_obj.insert_data(
-                    line, self._method[line], filename, "kcalloc")
+            if self._method[line] != '':
+                if "palloc0" in self._method[line] and "define" not in self._method[line] and ":" not in self._method[line] and "?" not in self._method[line]:
+                    self.REDAWN += 1
+                    self.REDAWZ += 1
+                    self.REM2A += 1
+                    db_obj.insert_data(
+                        line, self._method[line], filename, "palloc")
 
-            if "xcalloc (" in self._method[line] and "define" not in self._method[line] and ":" not in self._method[line] and "?" not in self._method[line]:
-                self.xcalloc_counter += 1
-                db_obj.insert_data(
-                    line, self._method[line], filename, "xcalloc")
+                if 'free(' in self._method[line]:
+                    self.RMFS += 1
+                    db_obj.insert_data(
+                        line, self._method[line], filename, "free")
 
-            if 'free (' in self._method[line]:
-                self.free_counter += 1
-                db_obj.insert_data(
-                    line, self._method[line], filename, "free")
+                if 'pfree(' in self._method[line]:
+                    self.RMFS += 1
+                    db_obj.insert_data(
+                        line, self._method[line], filename, "pfree")
 
-            if 'kfree (' in self._method[line]:
-                self.free_counter += 1
-                db_obj.insert_data(
-                    line, self._method[line], filename, "kfree")
+                if 'palloc0(' in self._method[line] and 'sizeof(' in self._method[line]:
+                    self.RESOTPE += 1
+                    self.REMTOSP += 1
+                    db_obj.insert_data(
+                        line, self._method[line], filename, "resotpe")
 
-            if 'malloc' in self._method[line] and 'sizeof' in self._method[line] and ":" not in self._method[line] and "?" not in self._method[line]:
-                self.RESOTPE_COUNTER += 1
-                db_obj.insert_data(
-                    line, self._method[line], filename, "malloc")
+            # if 'pfree (' in self._method[line] and 'sizeof' in self._method[line] and ":" not in self._method[line] and "?" not in self._method[line]:
+            #     self.RESOTPE_COUNTER += 1
+            #     db_obj.insert_data(
+            #         line, self._method[line], filename, "sizeof")
 
-            if 'xmalloc' in self._method[line] and 'sizeof' in self._method[line] and ":" not in self._method[line] and "?" not in self._method[line]:
-                self.RESOTPE_COUNTER += 1
-                db_obj.insert_data(
-                    line, self._method[line], filename, "sizeof")
+            # if 'xmalloc (' in self._method[line] and "define" not in self._method[line] and ":" not in self._method[line] and "?" not in self._method[line]:
+            #     self.xmalloc_counter += 1
+            #     db_obj.insert_data(
+            #         line, self._method[line], filename, "xmalloc")
 
-            if 'xmalloc' in self._method[line] and "define" not in self._method[line] and ":" not in self._method[line] and "?" not in self._method[line]:
-                self.xmalloc_counter += 1
-                db_obj.insert_data(
-                    line, self._method[line], filename, "xmalloc")
-
-            if 'malloc' in self._method[line] and "define" not in self._method[line] and ":" not in self._method[line] and "?" not in self._method[line]:
-                self.malloc_counter += 1
-                db_obj.insert_data(
-                    line, self._method[line], filename, "malloc")
+            # if 'malloc (' in self._method[line] and "define" not in self._method[line] and ":" not in self._method[line] and "?" not in self._method[line]:
+            #     self.malloc_counter += 1
+            #     db_obj.insert_data(
+            #         line, self._method[line], filename, "malloc")
 
     def apply(self, current_file, filename):
         self.func_UMA(current_file, filename)
@@ -141,6 +150,7 @@ def main():
         for sub_files in _files:
             current_file = os.path.join(root, sub_files)
             if current_file.endswith(".c"):
+                ret = call(['./lib/remove.sh', current_file, sub_files])
                 data_dict = _obj.read_code_file(current_file)
                 # with codecs.open(full_path, "r", encoding="ascii") as f:
                 # data_dict = f.readlines()
@@ -148,21 +158,13 @@ def main():
                 _obj.apply(current_file, sub_files)
                 # _obj.buildWrite(current_file)
                 _obj.reset_flag()
-    print("DYNAMIC MEMORY ALLOCATION")
-    print("malloc:", _obj.malloc_counter)
-    print("kmalloc:", _obj.kmalloc_counter)
-    print("xmalloc:", _obj.xmalloc_counter)
-    print("calloc:", _obj.calloc_counter)
-    print("kcalloc:", _obj.kcalloc_counter)
-    print("xcalloc:", _obj.xcalloc_counter)
-    print("OTHER")
-    print("NULL:", _obj.null_counter)
-    print("sizeOf:", _obj.sizeOf_counter)
-    print("free:", _obj.free_counter)
-    print("kfree:", _obj.kfree_counter)
-    print('RESOTPE', _obj.RESOTPE_COUNTER)
-    i += 1
-    print(i)
+                print("DYNAMIC MEMORY ALLOCATION")
+                print("REDAWN:", _obj.REDAWN)
+                print("REDAWZ:", _obj.REDAWZ)
+                print("REM2A:", _obj.REM2A)
+                print("RESOTPE:", _obj.RESOTPE)
+                print("REMTOSP:", _obj.REMTOSP)
+                print()
 
 
 if __name__ == '__main__':

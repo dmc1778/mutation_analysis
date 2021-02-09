@@ -1,4 +1,4 @@
 #! /bin/bash
 
 cd /home/nimashiri/
-tar -xf coreutils-8.32.tar.xz
+tar -xf postgres-REL_13_1.tar.gz

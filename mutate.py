@@ -12,7 +12,6 @@ check_obj = CheckPotential()
 
 
 base_path = "/home/nimashiri/coreutils-8.32/src"
-PotentialPath = "/home/nimashiri/coreutils-8.32/src"
 
 
 def runProcess(exe):
@@ -25,7 +24,15 @@ def runProcess(exe):
             break
 
 
-class Mutate:
+def write_to_disc(filecontent, filename):
+    target_path = os.path.join(base_path, filename)
+    with codecs.open(target_path, 'w') as f_method:
+        for line in filecontent:
+            f_method.write("%s\n" % filecontent[line])
+        f_method.close()
+
+
+class MutateGNU:
     def __init__(self, project_name):
         self.killed = 0
         self.alive = 0
@@ -84,13 +91,6 @@ class Mutate:
         print('--------------------------------------------------')
         print("REM2A: {rem2aa}".format(rem2aa=self.REM2A_COUNTER_alive))
         print("REM2A: {rem2ak}".format(rem2ak=self.REM2A_COUNTER_killed))
-
-    def write_to_disc(self, filecontent, filename):
-        target_path = os.path.join(base_path, filename)
-        with codecs.open(target_path, 'w') as f_method:
-            for line in filecontent:
-                f_method.write("%s\n" % filecontent[line])
-            f_method.close()
 
     def determine_operator(self, opt):
         if 'xmalloc' in opt or 'malloc' in opt or 'kmalloc' in opt:
@@ -167,13 +167,13 @@ class Mutate:
                 selected = self.REDAWN_schemata(selected)
                 temp_mutant = ''.join(selected)
                 temp_data_dict[item[0]] = temp_mutant
-                #self.write_to_disc(temp_data_dict, item[2])
+                write_to_disc(temp_data_dict, item[2])
 
-                #rc = call("./compilation_scripts/grep-exec.sh")
+                # rc = call("./compilation_scripts/grep-exec.sh")
                 kill_flag = False
                 for line in runProcess('./compilation_scripts/grep-exec.sh'.split()):
                     # print(line)
-                    if re.findall(r'\b(FAIL)\b', str(line)):
+                    if re.findall(r'\b(FAILED)\b', str(line)):
                         self.killed += 1
                         kill_flag = True
                         self.REDAWN_COUNTER_killed += 1
@@ -181,8 +181,6 @@ class Mutate:
                 if not kill_flag:
                     self.alive += 1
                     self.REDAWN_COUNTER_alive += 1
-
-                #self.write_to_disc(original_data_dict, item[2])
 
             if mkind == 'REDAWZ':
                 call("./compilation_scripts/unzip.sh")
@@ -200,12 +198,12 @@ class Mutate:
                 selected = self.REDAWZ_schemata(selected)
                 temp_mutant = ''.join(selected)
                 temp_data_dict[item[0]] = temp_mutant
-                self.write_to_disc(temp_data_dict, item[2])
+                write_to_disc(temp_data_dict, item[2])
 
                 kill_flag = False
                 for line in runProcess('./compilation_scripts/grep-exec.sh'.split()):
                     # print(line)
-                    if re.findall(r'\b(FAIL)\b', str(line)):
+                    if re.findall(r'\b(FAILED)\b', str(line)):
                         self.killed += 1
                         kill_flag = True
                         self.REDAWZ_COUNTER_killed += 1
@@ -213,7 +211,6 @@ class Mutate:
                 if not kill_flag:
                     self.alive += 1
                     self.REDAWZ_COUNTER_alive += 1
-                # self.write_to_disc(original_data_dict, item[2])
 
             if mkind == 'REC2A':
                 call("./compilation_scripts/unzip.sh")
@@ -231,12 +228,12 @@ class Mutate:
                 selected = self.REC2A_schemata(selected)
                 temp_mutant = ''.join(selected)
                 temp_data_dict[item[0]] = temp_mutant
-                self.write_to_disc(temp_data_dict, item[2])
+                write_to_disc(temp_data_dict, item[2])
 
                 kill_flag = False
                 for line in runProcess('./compilation_scripts/grep-exec.sh'.split()):
                     # print(line)
-                    if re.findall(r'\b(FAIL)\b', str(line)):
+                    if re.findall(r'\b(FAILED)\b', str(line)):
                         self.killed += 1
                         kill_flag = True
                         self.REC2A_COUNTER_killed += 1
@@ -251,13 +248,13 @@ class Mutate:
                 components = re.findall(r'(?:^|\W)(free)(?:$|\W)(.*)', item[1])
                 if components:
                     del temp_data_dict[item[0]]
-                    self.write_to_disc(temp_data_dict, item[2])
+                    write_to_disc(temp_data_dict, item[2])
                     rc = call("./compilation_scripts/grep-exec.sh")
                     if rc == 0:
                         self.alive += 1
                     else:
                         self.killed += 1
-                    #self.write_to_disc(original_data_dict, item[2])
+                    # self.write_to_disc(original_data_dict, item[2])
                 else:
                     rc = call(
                         "./compilation_scripts/grep-exec.sh")
@@ -282,12 +279,12 @@ class Mutate:
                 selected = self.REC2M_schemata(selected)
                 temp_mutant = ''.join(selected)
                 temp_data_dict[item[0]] = temp_mutant
-                self.write_to_disc(temp_data_dict, item[2])
+                write_to_disc(temp_data_dict, item[2])
 
                 kill_flag = False
                 for line in runProcess('./compilation_scripts/grep-exec.sh'.split()):
                     # print(line)
-                    if re.findall(r'\b(FAIL)\b', str(line)):
+                    if re.findall(r'\b(FAILED)\b', str(line)):
                         self.killed += 1
                         kill_flag = True
                         self.REC2M_COUNTER_killed += 1
@@ -295,7 +292,6 @@ class Mutate:
                 if not kill_flag:
                     self.alive += 1
                     self.REC2M_COUNTER_alive += 1
-                # self.write_to_disc(original_data_dict, item[2])
 
             if mkind == 'REM2A':
                 call("./compilation_scripts/unzip.sh")
@@ -313,12 +309,12 @@ class Mutate:
                 selected = self.REM2A_schemata(selected)
                 temp_mutant = ''.join(selected)
                 temp_data_dict[item[0]] = temp_mutant
-                self.write_to_disc(temp_data_dict, item[2])
+                write_to_disc(temp_data_dict, item[2])
 
                 kill_flag = False
                 for line in runProcess('./compilation_scripts/grep-exec.sh'.split()):
                     # print(line)
-                    if re.findall(r'\b(FAIL)\b', str(line)):
+                    if re.findall(r'\b(FAILED)\b', str(line)):
                         self.killed += 1
                         kill_flag = True
                         self.REM2A_COUNTER_killed += 1
@@ -327,11 +323,9 @@ class Mutate:
                     self.alive += 1
                     self.REM2A_COUNTER_alive += 1
 
-                # self.write_to_disc(original_data_dict, item[2])
-
 
 def main(project_name):
-    m = Mutate(project_name)
+    mgnu = MutateGNU(project_name)
     ds_list = db_obj.filter_table()
     for item in ds_list:
         call("./compilation_scripts/unzip.sh")
@@ -339,16 +333,15 @@ def main(project_name):
         if ';' in item[1]:
             current_file = os.path.join(base_path, item[2])
             data_dict = check_obj.read_code_file(current_file)
-            if 'free' not in item[3]:
-                if 'xnmalloc' not in item[1]:
-                    filtered_operators = m.determine_operator(item[3])
-                    m.apply_mutate(filtered_operators, data_dict, item)
-                m.reset_flag()
-                m.report_summary()
+            filtered_operators = mgnu.determine_operator(item[3])
+            mgnu.apply_mutate(filtered_operators, data_dict, item)
+            mgnu.reset_flag()
+            mgnu.report_summary()
 
 
 if __name__ == "__main__":
-    project_name = "coreutils-8.32"
+
+    project_name = "postgre"
     print(
         "MUTATION ANALYSIS STARTED FOR --- {project}".format(project=project_name))
     start_time = time.time

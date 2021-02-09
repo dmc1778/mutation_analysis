@@ -1,25 +1,15 @@
 import os
-from pickle import TRUE
 import re
 import json
 import codecs
-import nltk
-from nltk.tokenize import word_tokenize, WhitespaceTokenizer
 import os
 from pathlib import Path
 import itertools
 import csv
-from sklearn import metrics
-from pycparser import c_parser, c_ast
 from DBadapter import DBHandler
 from subprocess import call
 import subprocess
-
-project_name = "postgres-REL_13_1"
-
-base_path = "/home/nimashiri/postgres-REL_13_1/src"
-
-PotentialPath = "/home/nimashiri/postgres-REL_13_1/src"
+import argparse
 
 db_obj = DBHandler()
 
@@ -46,6 +36,8 @@ class CheckPotential:
         self.RESOTPE = 0
         self.REMTOSP = 0
         self.RMFS = 0
+
+        self.mutId = 0
 
     def reset_flag(self):
         self.line_reg = []
@@ -78,28 +70,33 @@ class CheckPotential:
     def func_UMA(self, current_file, filename):
         for line in self._method:
             if self._method[line] != '':
-                if "palloc0" in self._method[line] and "define" not in self._method[line] and ":" not in self._method[line] and "?" not in self._method[line]:
+                # and "define" not in self._method[line] and ":" not in self._method[line] and "?" not in self._method[line]
+                if "palloc0" in self._method[line]:
                     self.REDAWN += 1
                     self.REDAWZ += 1
                     self.REM2A += 1
-                    db_obj.insert_data(
-                        line, self._method[line], filename, "palloc")
+                    self.mutId += 1
+                    db_obj.insert_data(self.mutId,
+                                       line, self._method[line], filename, "palloc", current_file)
 
                 if 'free(' in self._method[line]:
                     self.RMFS += 1
-                    db_obj.insert_data(
-                        line, self._method[line], filename, "free")
+                    self.mutId += 1
+                    db_obj.insert_data(self.mutId,
+                                       line, self._method[line], filename, "free", current_file)
 
                 if 'pfree(' in self._method[line]:
                     self.RMFS += 1
-                    db_obj.insert_data(
-                        line, self._method[line], filename, "pfree")
+                    self.mutId += 1
+                    db_obj.insert_data(self.mutId,
+                                       line, self._method[line], filename, "pfree", current_file)
 
                 if 'palloc0(' in self._method[line] and 'sizeof(' in self._method[line]:
                     self.RESOTPE += 1
                     self.REMTOSP += 1
-                    db_obj.insert_data(
-                        line, self._method[line], filename, "resotpe")
+                    self.mutId += 1
+                    db_obj.insert_data(self.mutId,
+                                       line, self._method[line], filename, "sizeof", current_file)
 
             # if 'pfree (' in self._method[line] and 'sizeof' in self._method[line] and ":" not in self._method[line] and "?" not in self._method[line]:
             #     self.RESOTPE_COUNTER += 1
@@ -127,14 +124,19 @@ class CheckPotential:
 
     def read_code_file(self, file_path):
         code_lines = {}
-        with open(file_path) as fp:
-            for ln, line in enumerate(fp):
-                assert isinstance(line, str)
-                line = line.strip()
-                if '//' in line:
-                    line = line[:line.index('//')]
-                code_lines[ln + 1] = line
-        return code_lines
+        file_path = Path(file_path)
+        if file_path.exists:
+            ret = False
+            with open(file_path) as fp:
+                for ln, line in enumerate(fp):
+                    assert isinstance(line, str)
+                    line = line.strip()
+                    if '//' in line:
+                        line = line[:line.index('//')]
+                    code_lines[ln + 1] = line
+        else:
+            ret = True
+        return code_lines, ret
 
     def read_entire_code_file(self, file_path):
         with open(file_path, 'r') as content_file:
@@ -142,21 +144,21 @@ class CheckPotential:
         return content_list
 
 
-def main():
+def main(args):
+
+    db_obj.build_database()
+
+    target_path = args.target_path
     _obj = CheckPotential()
-    # filelist = os.listdir(Path)
-    i = 0
-    for root, dirnames, _files in os.walk(base_path):
+
+    for root, _, _files in os.walk(target_path):
         for sub_files in _files:
             current_file = os.path.join(root, sub_files)
             if current_file.endswith(".c"):
-                ret = call(['./lib/remove.sh', current_file, sub_files])
-                data_dict = _obj.read_code_file(current_file)
-                # with codecs.open(full_path, "r", encoding="ascii") as f:
-                # data_dict = f.readlines()
+                call(['./lib/remove.sh', current_file, sub_files])
+                data_dict, ret = _obj.read_code_file(current_file)
                 _obj.set(data_dict)
                 _obj.apply(current_file, sub_files)
-                # _obj.buildWrite(current_file)
                 _obj.reset_flag()
                 print("DYNAMIC MEMORY ALLOCATION")
                 print("REDAWN:", _obj.REDAWN)
@@ -164,10 +166,13 @@ def main():
                 print("REM2A:", _obj.REM2A)
                 print("RESOTPE:", _obj.RESOTPE)
                 print("REMTOSP:", _obj.REMTOSP)
-                print()
+                print("RMFS", _obj.RMFS)
 
 
 if __name__ == '__main__':
-    # db_obj.delete_table()
-    db_obj.create_table()
-    main()
+    parser = argparse.ArgumentParser(
+        description='Analyze your project for potential mutations')
+    parser.add_argument('target_path', type=str, help='your target directory')
+    args = parser.parse_args()
+    # args = "/home/nimashiri/postgres-REL_13_1/src/"
+    main(args)

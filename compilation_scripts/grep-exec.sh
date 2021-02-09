@@ -2,9 +2,9 @@
 
 cd /home/nimashiri/
 
-chmod -R 755 coreutils-8.32
+chmod -R 755 postgres-REL_13_1
 
-cd /home/nimashiri/coreutils-8.32/
+cd /home/nimashiri/postgres-REL_13_1/
 ./configure
 make check
-rm -rf /home/nimashiri/coreutils-8.32/src/
+rm -rf /home/nimashiri/postgres-REL_13_1/

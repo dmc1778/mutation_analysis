@@ -6,13 +6,16 @@ class DBHandler:
         self.conn = sqlite3.connect('mutation_database.db')
         self.c = self.conn.cursor()
 
+    def build_database(self):
+        self.create_table()
+
     def create_table(self):
-        create_query = 'CREATE TABLE IF NOT EXISTS mutationTable(lineNumber String, potentialLine Text, methodBody Text, mutationKind Text)'
+        create_query = 'CREATE TABLE IF NOT EXISTS mutationTable(mutId Int,lineNumber String, potentialLine Text, methodBody Text, mutationKind Text, Faddress Text, status Int)'
         self.c.execute(create_query)
 
-    def insert_data(self, lineNumber, potentialLine, methodBody, mutationKind):
-        insert_query = "INSERT INTO mutationTable VALUES (" + "'" + str(
-            lineNumber) + "'" + "," + "'" + potentialLine + "'" + "," + "'" + methodBody + "'" + "," + "'" + mutationKind + "'" + ")"
+    def insert_data(self, mId, lineNumber, potentialLine, methodBody, mutationKind, file_addr):
+        insert_query = "INSERT INTO mutationTable VALUES (" + "'" + str(mId) + "'" + "," + "'" + str(
+            lineNumber) + "'" + "," + "'" + potentialLine + "'" + "," + "'" + methodBody + "'" + "," + "'" + mutationKind + "'" + "," + "'" + file_addr + "'" + "," + "'" + str(0) + "'" + ")"
         # print(insert_query)
         self.c.execute(insert_query)
         self.conn.commit()
@@ -25,6 +28,11 @@ class DBHandler:
         drop_query = 'DROP TABLE mutationTable'
         self.c.execute(drop_query)
 
+    def update(self, mutId, newStatus):
+        self.c.execute(
+            '''UPDATE mutationTable SET status = ? WHERE mutId = ?''', (newStatus, mutId))
+        self.conn.commit()
+
     def filter_table(self):
         mutation_list = []
         cursor_obj = self.read_data()
@@ -35,12 +43,9 @@ class DBHandler:
 
 def main():
     db_handler = DBHandler()
-    # db_handler.create_table()
-    # db_handler.insert_data(12, "x = malloc (sizeof(char*))",
-    #                      "x = malloc (sizeof(char*))")
-    # db_handler.delete_table()
     ds_list = db_handler.filter_table()
-    print(ds_list)
+    for i in range(len(ds_list)):
+        print(ds_list[i])
 
 
 if __name__ == "__main__":

@@ -244,44 +244,21 @@ class MutatePOSTGRE:
 
     def apply_mutate(self, filtered_operators, temp_data_dict, item, operator):
         for mkind in filtered_operators:
-            if mkind == 'REDAWN':
+            if mkind == 'REDAWN' and operator == 'REDAWN':
                 self.apply_REDAWN(filtered_operators,
                                   temp_data_dict, item, operator)
 
-            if mkind == 'REDAWZ':
+            if mkind == 'REDAWZ' and operator == 'REDAWZ':
                 self.apply_REDAWZ(filtered_operators,
                                   temp_data_dict, item, operator)
 
-            if mkind == 'REC2A':
+            if mkind == 'REC2A' and operator == 'REC2A':
                 self.apply_REC2A(filtered_operators,
                                  temp_data_dict, item, operator)
 
-            if mkind == 'RMFS':
+            if mkind == 'RMFS' and operator == 'RMFS':
                 self.apply_RMFS(filtered_operators,
                                 temp_data_dict, item, operator)
-
-            # if mkind == 'RESOTPE':
-            #     call("./compilation_scripts/unzip.sh")
-            #     components = re.findall(
-            #         r'([^=]+)((?<!=)=(?!=))(?:^|\W)(.*)(sizeof)(?:$|\W)(.*)', item[1])
-
-            #     components = list(components[0])
-            #     components = self.RESOTPE_schemata(components)
-            #     temp_mutant = ''.join(components)
-            #     temp_data_dict[item[0]] = temp_mutant
-            #     write_to_disc(temp_data_dict, item[4])
-
-            # kill_flag = False
-            # for line in runProcess('./compilation_scripts/grep-exec.sh'.split()):
-            #     print(line)
-            #     if re.findall(r'\b(FAILED)\b', str(line)):
-            #         self.killed += 1
-            #         kill_flag = True
-            #         self.RESOTPE_COUNTER_killed += 1
-            #         break
-            # if not kill_flag:
-            #     self.alive += 1
-            #     self.RESOTPE_COUNTER_alive += 1
 
     def report_summary(self):
         print("#######################MUTATION ANALYSIS############")
@@ -331,20 +308,15 @@ def main(args):
             if not ret:
                 filtered_operators = mpost.determine_operator(item[4])
                 mpost.apply_mutate(filtered_operators,
-                                   data_dict, item, operator)
+                                   data_dict, item, args.operator)
                 mpost.reset_flag()
                 mpost.report_summary()
 
 
 if __name__ == "__main__":
-    # project_name = "postgre"
-    # mutantSourcesDir = "/home/nimashiri/postgres-REL_13_1/src"
-    # targetBuggyDir = "/home/nimashiri/vsprojects/mutation_analysis/postgres/buggy"
-    # targetCleanDir = "/home/nimashiri/vsprojects/mutation_analysis/postgres/clean"
-
     parser = argparse.ArgumentParser(
         description='Mutation Analysis of Your Project')
-    parser.add_argument('Mutation_operator', type=str,
+    parser.add_argument('operator', type=str,
                         help="Please choose your mutation operator. Type all if you want apply all of them at this execution.")
     parser.add_argument('project_name', type=str, help='name of your project')
     parser.add_argument('mutantSourcesDir', type=str,

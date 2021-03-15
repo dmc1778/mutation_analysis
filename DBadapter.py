@@ -10,15 +10,18 @@ class DBHandler:
         self.create_table()
 
     def create_table(self):
-        create_query = 'CREATE TABLE IF NOT EXISTS mutationTable(mutId Int,lineNumber String, potentialLine Text, methodBody Text, mutationKind Text, Faddress Text, status Int)'
+        create_query = 'CREATE TABLE IF NOT EXISTS mutationTable(mutId Int,lineNumber String, potentialLine Text, mutatedLine Text, methodBody Text, mutationKind Text, Faddress Text, status Int, mstatus Text, location string)'
         self.c.execute(create_query)
 
-    def insert_data(self, mId, lineNumber, potentialLine, methodBody, mutationKind, file_addr):
+    def insert_data(self, mId, lineNumber, potentialLine, mutatedLine, methodBody, mutationKind, file_addr, mstatus, location):
         insert_query = "INSERT INTO mutationTable VALUES (" + "'" + str(mId) + "'" + "," + "'" + str(
-            lineNumber) + "'" + "," + "'" + potentialLine + "'" + "," + "'" + methodBody + "'" + "," + "'" + mutationKind + "'" + "," + "'" + file_addr + "'" + "," + "'" + str(0) + "'" + ")"
-        # print(insert_query)
-        self.c.execute(insert_query)
-        self.conn.commit()
+            lineNumber) + "'" + "," + "'" + potentialLine + "'" + "," + "'" + mutatedLine + "'" + "," + "'" + methodBody + "'" + "," + "'" + mutationKind + "'" + "," + "'" + file_addr + "'" + "," + "'" + str(0) + "'" + "," + "'" + mstatus + "'" + "," + "'" + location + "'" + ")"
+
+        try:
+            self.c.execute(insert_query)
+            self.conn.commit()
+        except sqlite3.Error as ee:
+            print('SQLite error: %s' % (' '.join(ee.args)))
 
     def read_data(self):
         read_query = 'SELECT * FROM mutationTable'
@@ -27,10 +30,25 @@ class DBHandler:
     def delete_table(self):
         drop_query = 'DROP TABLE mutationTable'
         self.c.execute(drop_query)
+    
+    def delete_null(self):
+        q = 'DELETE from mutationTable where potentialLine is null'
+        self.c.execute(q)
+        self.conn.commit()
 
     def update(self, mutId, newStatus):
         self.c.execute(
             '''UPDATE mutationTable SET status = ? WHERE mutId = ?''', (newStatus, mutId))
+        self.conn.commit()
+
+    def updateMstatus(self, mutId, newStatus):
+        self.c.execute(
+            '''UPDATE mutationTable SET mstatus = ? WHERE mutId = ?''', (newStatus, mutId))
+        self.conn.commit()
+
+    def updateMutatedLine(self, mutId, mutatedLine):
+        self.c.execute(
+            '''UPDATE mutationTable SET mutatedLine = ? WHERE mutId = ?''', (mutatedLine, mutId))
         self.conn.commit()
 
     def filter_table(self):

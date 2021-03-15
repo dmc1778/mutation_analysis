@@ -10,6 +10,10 @@ from DBadapter import DBHandler
 from subprocess import call
 import subprocess
 import argparse
+import re
+# from func_extract_clang import main
+from func_extract_clang import source_to_ast
+from subprocess import call
 
 db_obj = DBHandler()
 
@@ -17,25 +21,18 @@ db_obj = DBHandler()
 class CheckPotential:
     def __init__(self) -> None:
         self._method = ""
-        self.malloc_counter = 0
-        self.kmalloc_counter = 0
-        self.xmalloc_counter = 0
-        self.calloc_counter = 0
-        self.kcalloc_counter = 0
-        self.xcalloc_counter = 0
-
-        self.free_counter = 0
-        self.kfree_counter = 0
-        self.null_counter = 0
-        self.sizeOf_counter = 0
-        self.palloc0_counter = 0
-
         self.REDAWN = 0
         self.REDAWZ = 0
         self.REM2A = 0
         self.RESOTPE = 0
         self.REMTOSP = 0
         self.RMFS = 0
+        self.REDAWN2 = 0
+        self.REDAWN3 = 0
+        self.REDAWN4 = 0
+        self.REDAWN5 = 0
+        self.OBW = 0
+        self.FAA = 0
 
         self.mutId = 0
 
@@ -67,51 +64,79 @@ class CheckPotential:
                 self._method[line] = ''.join(components)
                 self.del_flag = True
 
+    def rangeCheck(self, line):
+        metaInfo = self.read_txt()
+        for item in metaInfo:
+            splitItems = item.split(',')
+            if int(splitItems[2]) < line < int(splitItems[3]):
+                x = ', '.join([splitItems[2], splitItems[3]])
+                return x
+            else:
+                x = 'not found'
+        return 'not found'
+
     def func_UMA(self, current_file, filename):
         for line in self._method:
             if self._method[line] != '':
                 # and "define" not in self._method[line] and ":" not in self._method[line] and "?" not in self._method[line]
+                if 'memcpy' in self._method[line]:
+                    myrange = self.rangeCheck(line)
+                    self.REDAWN2 += 1
+                    self.REDAWN3 += 1
+                    self.OBW += 1
+                    self.mutId += 1
+                    db_obj.insert_data(
+                        self.mutId, line, self._method[line], '', filename, "memcpy", current_file, '', myrange)
+                
+
+                if 'strcpy' in self._method[line]:
+                    myrange = self.rangeCheck(line)
+                    self.REDAWN4 += 1
+                    self.REDAWN5 += 1
+                    self.mutId += 1
+                    db_obj.insert_data(
+                        self.mutId, line, self._method[line], '', filename, "strcpy", current_file, '', myrange)
+
                 if "palloc0" in self._method[line]:
+                    myrange = self.rangeCheck(line)
+                    self.FAA += 1
                     self.REDAWN += 1
                     self.REDAWZ += 1
                     self.REM2A += 1
                     self.mutId += 1
                     db_obj.insert_data(self.mutId,
-                                       line, self._method[line], filename, "palloc", current_file)
+                                       line, self._method[line], '', filename, "palloc", current_file, '', myrange)
 
                 if 'free(' in self._method[line]:
+                    myrange = self.rangeCheck(line)
                     self.RMFS += 1
                     self.mutId += 1
                     db_obj.insert_data(self.mutId,
-                                       line, self._method[line], filename, "free", current_file)
+                                       line, self._method[line], '', filename, "free", current_file, '', myrange)
 
                 if 'pfree(' in self._method[line]:
+                    myrange = self.rangeCheck(line)
                     self.RMFS += 1
                     self.mutId += 1
                     db_obj.insert_data(self.mutId,
-                                       line, self._method[line], filename, "pfree", current_file)
+                                       line, self._method[line], '', filename, "pfree", current_file, '', myrange)
 
-                if 'palloc0(' in self._method[line] and 'sizeof(' in self._method[line]:
-                    self.RESOTPE += 1
-                    self.REMTOSP += 1
-                    self.mutId += 1
-                    db_obj.insert_data(self.mutId,
-                                       line, self._method[line], filename, "sizeof", current_file)
-
-            # if 'pfree (' in self._method[line] and 'sizeof' in self._method[line] and ":" not in self._method[line] and "?" not in self._method[line]:
-            #     self.RESOTPE_COUNTER += 1
-            #     db_obj.insert_data(
-            #         line, self._method[line], filename, "sizeof")
-
-            # if 'xmalloc (' in self._method[line] and "define" not in self._method[line] and ":" not in self._method[line] and "?" not in self._method[line]:
-            #     self.xmalloc_counter += 1
-            #     db_obj.insert_data(
-            #         line, self._method[line], filename, "xmalloc")
-
-            # if 'malloc (' in self._method[line] and "define" not in self._method[line] and ":" not in self._method[line] and "?" not in self._method[line]:
-            #     self.malloc_counter += 1
-            #     db_obj.insert_data(
-            #         line, self._method[line], filename, "malloc")
+                if "palloc0" in self._method[line] or 'palloc' in self._method[line] and 'sizeof' in self._method[line]:
+                    myrange = self.rangeCheck(line)
+                    components = re.findall(
+                        r'([^=]+)((?<!=)=(?!=))(?:^|\W)(.*)(palloc0)(?:$|\W)(.*)', self._method[line])
+                    if components:
+                        components = list(components[0])
+                        for s in components:
+                            if 'sizeof(' in s:
+                                subComponents = re.findall(
+                                    r'sizeof\((.*)\)', s)
+                                if '*' not in subComponents[0]:
+                                    self.REMTOSP += 1
+                                    self.mutId += 1
+                                    db_obj.insert_data(self.mutId,
+                                                       line, self._method[line], '', filename, "sizeof", current_file, '', myrange)
+                                    pass
 
     def apply(self, current_file, filename):
         self.func_UMA(current_file, filename)
@@ -143,11 +168,16 @@ class CheckPotential:
             content_list = content_file.r
         return content_list
 
+    def read_txt(self):
+        with open('result.txt', 'r') as fileReader:
+            data = fileReader.read().splitlines()
+        return data
+
 
 def main(args):
-
     db_obj.build_database()
 
+    # target_path = '/home/nimashiri/benchmarks/run1/postgres-REL_13_1/src/'
     target_path = args.target_path
     _obj = CheckPotential()
 
@@ -156,13 +186,21 @@ def main(args):
             current_file = os.path.join(root, sub_files)
             if current_file.endswith(".c"):
                 call(['./lib/remove.sh', current_file, sub_files])
+                source_to_ast(current_file, 'result.txt')
                 data_dict, ret = _obj.read_code_file(current_file)
                 _obj.set(data_dict)
                 _obj.apply(current_file, sub_files)
+                call("./remove-clang.sh")
                 _obj.reset_flag()
                 print("DYNAMIC MEMORY ALLOCATION")
-                print("REDAWN:", _obj.REDAWN)
                 print("REDAWZ:", _obj.REDAWZ)
+                print("REDAWN:", _obj.REDAWN)
+                print("REDAWN2:", _obj.REDAWN2)
+                print("REDAWN3:", _obj.REDAWN3)
+                print("REDAWN4:", _obj.REDAWN4)
+                print("REDAWN5:", _obj.REDAWN5)
+                print("OBW:", _obj.OBW)
+                print("FAA:", _obj.FAA)
                 print("REM2A:", _obj.REM2A)
                 print("RESOTPE:", _obj.RESOTPE)
                 print("REMTOSP:", _obj.REMTOSP)
@@ -170,8 +208,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Analyze your project for potential mutations')
+    parser = argparse.ArgumentParser(description='Analyze your project for potential mutations')
     parser.add_argument('target_path', type=str, help='your target directory')
     args = parser.parse_args()
     # args = "/home/nimashiri/postgres-REL_13_1/src/"
